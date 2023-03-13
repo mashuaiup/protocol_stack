@@ -5,16 +5,12 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 
-
 #define ENABLE_SEND		1
 #define ENABLE_ARP		1
-
-
 
 #define NUM_MBUFS (4096-1)
 
 #define BURST_SIZE	32
-
 
 #if ENABLE_SEND
 
@@ -30,37 +26,26 @@ static uint8_t gDstMac[RTE_ETHER_ADDR_LEN];
 
 static uint16_t gSrcPort;
 static uint16_t gDstPort;
-
 #endif
-
-
 int gDpdkPortId = 0;
-
 static const struct rte_eth_conf port_conf_default = {
 	.rxmode = {.max_rx_pkt_len = RTE_ETHER_MAX_LEN }
 };
-
 static void ng_init_port(struct rte_mempool *mbuf_pool) {
-
-	uint16_t nb_sys_ports= rte_eth_dev_count_avail(); //
+	uint16_t nb_sys_ports= rte_eth_dev_count_avail(); 
 	if (nb_sys_ports == 0) {
 		rte_exit(EXIT_FAILURE, "No Supported eth found\n");
 	}
-
 	struct rte_eth_dev_info dev_info;
-	rte_eth_dev_info_get(gDpdkPortId, &dev_info); //
-	
+	rte_eth_dev_info_get(gDpdkPortId, &dev_info); 
 	const int num_rx_queues = 1;
 	const int num_tx_queues = 1;
 	struct rte_eth_conf port_conf = port_conf_default;
 	rte_eth_dev_configure(gDpdkPortId, num_rx_queues, num_tx_queues, &port_conf);
 
-
 	if (rte_eth_rx_queue_setup(gDpdkPortId, 0 , 1024, 
 		rte_eth_dev_socket_id(gDpdkPortId),NULL, mbuf_pool) < 0) {
-
 		rte_exit(EXIT_FAILURE, "Could not setup RX queue\n");
-
 	}
 	
 #if ENABLE_SEND
@@ -68,9 +53,7 @@ static void ng_init_port(struct rte_mempool *mbuf_pool) {
 	txq_conf.offloads = port_conf.rxmode.offloads;
 	if (rte_eth_tx_queue_setup(gDpdkPortId, 0 , 1024, 
 		rte_eth_dev_socket_id(gDpdkPortId), &txq_conf) < 0) {
-		
 		rte_exit(EXIT_FAILURE, "Could not setup TX queue\n");
-		
 	}
 #endif
 
@@ -80,16 +63,12 @@ static void ng_init_port(struct rte_mempool *mbuf_pool) {
 }
 
 static int ng_encode_udp_pkt(uint8_t *msg, unsigned char *data, uint16_t total_len) {
-
 	// encode 
-
 	// 1 ethhdr
 	struct rte_ether_hdr *eth = (struct rte_ether_hdr *)msg;
 	rte_memcpy(eth->s_addr.addr_bytes, gSrcMac, RTE_ETHER_ADDR_LEN);
 	rte_memcpy(eth->d_addr.addr_bytes, gDstMac, RTE_ETHER_ADDR_LEN);
 	eth->ether_type = htons(RTE_ETHER_TYPE_IPV4);
-	
-
 	// 2 iphdr 
 	struct rte_ipv4_hdr *ip = (struct rte_ipv4_hdr *)(msg + sizeof(struct rte_ether_hdr));
 	ip->version_ihl = 0x45;
@@ -101,12 +80,9 @@ static int ng_encode_udp_pkt(uint8_t *msg, unsigned char *data, uint16_t total_l
 	ip->next_proto_id = IPPROTO_UDP;
 	ip->src_addr = gSrcIp;
 	ip->dst_addr = gDstIp;
-	
 	ip->hdr_checksum = 0;
 	ip->hdr_checksum = rte_ipv4_cksum(ip);
-
 	// 3 udphdr
-
 	struct rte_udp_hdr *udp = (struct rte_udp_hdr *)(msg + sizeof(struct rte_ether_hdr) + sizeof(struct rte_ipv4_hdr));
 	udp->src_port = gSrcPort;
 	udp->dst_port = gDstPort;
@@ -127,8 +103,6 @@ static int ng_encode_udp_pkt(uint8_t *msg, unsigned char *data, uint16_t total_l
 	
 	return 0;
 }
-
-
 static struct rte_mbuf * ng_send_udp(struct rte_mempool *mbuf_pool, uint8_t *data, uint16_t length) {
 
 	// mempool --> mbuf
@@ -253,7 +227,6 @@ int main(int argc, char *argv[]) {
 				
 				continue;
 			} 
-
 #endif
 			if (ehdr->ether_type != rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4)) {
 				continue;
@@ -294,9 +267,7 @@ int main(int argc, char *argv[]) {
 				struct rte_mbuf *txbuf = ng_send_udp(mbuf_pool, (uint8_t *)(udphdr+1), length);
 				rte_eth_tx_burst(gDpdkPortId, 0, &txbuf, 1);
 				rte_pktmbuf_free(txbuf);
-				
 #endif
-
 				rte_pktmbuf_free(mbufs[i]);
 			}
 			

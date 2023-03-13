@@ -1,0 +1,13 @@
+
+
+arp -s 192.168.0.120 00-0c-29-85-2e-88
+
+arp -d 192.168.0.120 
+
+
+查看网口idx
+netsh i i show in
+
+netsh -c i i add neighbors 23 192.168.0.120 00-0c-29-85-2e-88
+
+netsh  i i delete neighbors 22

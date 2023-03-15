@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/home/mashuai/dpdk-19.08/lib/**"
+                "/home/mashuai/dpdk-19.08/lib/**",
+                "/home/mashuai/dpdk-19.08/config"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

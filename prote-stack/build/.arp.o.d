@@ -1,4 +1,4 @@
-dep_arp.o = /home/mashuai/Desktop/dpdk代码/03_arp/arp.c \
+dep_arp.o = /home/mashuai/Desktop/dpdk代码/prote-stack/arp.c \
  /usr/include/stdc-predef.h \
  /home/mashuai/dpdk-19.08/x86_64-native-linux-gcc/include/rte_config.h \
  /home/mashuai/dpdk-19.08/x86_64-native-linux-gcc/include/rte_eal.h \
@@ -216,4 +216,5 @@ dep_arp.o = /home/mashuai/Desktop/dpdk代码/03_arp/arp.c \
  /home/mashuai/dpdk-19.08/x86_64-native-linux-gcc/include/rte_udp.h \
  /home/mashuai/dpdk-19.08/x86_64-native-linux-gcc/include/rte_esp.h \
  /home/mashuai/dpdk-19.08/x86_64-native-linux-gcc/include/rte_ethdev_core.h \
+ /home/mashuai/dpdk-19.08/x86_64-native-linux-gcc/include/rte_malloc.h \
  /usr/include/arpa/inet.h

@@ -187,6 +187,7 @@ static int handle_listen(tcp_stream *tcp_stream_item, struct rte_mempool * mbuf_
 		
 		//2、通过tx_brust传送出去 
 		rte_eth_tx_burst(gDpdkPortId, 0, &mbuf, 1);
+		rte_pktmbuf_free(mbuf);
 		//3、将状态转换成syn_received
 		tcp_stream_item->status = NG_TCP_TCP_STATUS_SYN_RECEIVED;		
 	}
@@ -467,8 +468,7 @@ int main(int argc, char *argv[]) {
 				default:
 					break;
 				}
-				
-				
+				rte_pktmbuf_free(mbufs[i]);	
 			}
 			
 		}

@@ -5,9 +5,10 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/home/mashuai/dpdk-19.08/lib/**",
-                "/home/mashuai/dpdk-19.08/config",
+                "/home/mashuai/dpdk-19.08/config/**",
                 "/home/mashuai/dpdk-19.08/**",
-                "/home/mashuai/Desktop/dpdk代码/prote-stack"
+                "/home/mashuai/Desktop/protostack/prote-stack/**",
+                "/home/mashuai/Desktop/protostack/prote-stack/tcp/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

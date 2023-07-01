@@ -9,11 +9,11 @@
 #include "arp.h"
 
 #define ENABLE_SEND		1
-#define ENABLE_ARP		1
 #define NUM_MBUFS (4096-1)
 #define BURST_SIZE	32
 #define TCP_MAX_SQE 4294967296
 #if ENABLE_SEND
+
 #define MAKE_IPV4_ADDR(a, b, c, d) (a + (b<<8) + (c<<16) + (d<<24))//转换成网络字节序
 uint32_t gLocalIp = MAKE_IPV4_ADDR(192, 168, 35, 199);
 uint32_t gSrcIp; //
@@ -129,11 +129,6 @@ static void port_init(struct rte_mempool *mbuf_pool) {
 	}
 }
 
-
-
-#if ENABLE_ARP
-
-#endif
 int main(int argc, char *argv[]) {
 	if (rte_eal_init(argc, argv) < 0) {
 		rte_exit(EXIT_FAILURE, "Error with EAL init\n");
@@ -154,7 +149,6 @@ int main(int argc, char *argv[]) {
 		unsigned i = 0;
 		for (i = 0; i < num_recvd; i++) {
 			struct rte_ether_hdr *ehdr = rte_pktmbuf_mtod(mbufs[i], struct rte_ether_hdr*);
-#if ENABLE_ARP
 			if (ehdr->ether_type == rte_cpu_to_be_16(RTE_ETHER_TYPE_ARP)) {
 				struct rte_arp_hdr *ahdr = rte_pktmbuf_mtod_offset(mbufs[i], 
 					struct rte_arp_hdr *, sizeof(struct rte_ether_hdr));
@@ -172,7 +166,7 @@ int main(int argc, char *argv[]) {
 				}
 				continue;
 			} 
-#endif
+			
 			if (ehdr->ether_type != rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4)) {
 				continue;
 			}

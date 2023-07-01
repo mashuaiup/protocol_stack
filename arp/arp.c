@@ -32,3 +32,21 @@ struct rte_mbuf *ng_send_arp(struct rte_mempool *mbuf_pool, uint8_t *dst_mac, ui
 	ng_encode_arp_pkt(pkt_data, dst_mac, sip, dip);
 	return mbuf;
 }
+
+
+void handle_arp(struct rte_mbuf *mbuf, struct rte_mempool *mbuf_pool){
+	struct rte_arp_hdr *ahdr = rte_pktmbuf_mtod_offset(mbuf, 
+					struct rte_arp_hdr *, sizeof(struct rte_ether_hdr));
+	struct in_addr addr;
+	addr.s_addr = ahdr->arp_data.arp_tip;//获取arp报文中的目的IP地址
+	printf("arp ---> src: %s ", inet_ntoa(addr));
+	addr.s_addr = gLocalIp;
+	printf("local: %s \n", inet_ntoa(addr));
+	if (ahdr->arp_data.arp_tip == gLocalIp) {//如果这个目的IP地址就是本机的IP地址（都需要是网络字节序）
+		struct rte_mbuf *arpbuf = ng_send_arp(mbuf_pool, ahdr->arp_data.arp_sha.addr_bytes, 
+			ahdr->arp_data.arp_tip, ahdr->arp_data.arp_sip);
+		rte_eth_tx_burst(gDpdkPortId, 0, &arpbuf, 1);
+		rte_pktmbuf_free(arpbuf);
+		rte_pktmbuf_free(mbuf);
+	}
+}

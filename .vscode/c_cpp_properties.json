@@ -7,8 +7,10 @@
                 "/home/mashuai/dpdk-19.08/lib/**",
                 "/home/mashuai/dpdk-19.08/config/**",
                 "/home/mashuai/dpdk-19.08/**",
-                "/home/mashuai/Desktop/protostack/prote-stack/**",
-                "/home/mashuai/Desktop/protostack/prote-stack/tcp/**"
+                "/home/mashuai/Desktop/protostack/**",
+                "/home/mashuai/Desktop/protostack/tcp/**",
+                "/home/mashuai/Desktop/protostack/udp/**",
+                "/home/mashuai/Desktop/protostack/arp/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

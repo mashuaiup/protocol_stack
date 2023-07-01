@@ -49,3 +49,27 @@ struct rte_mbuf * ng_send_udp(struct rte_mempool *mbuf_pool, uint8_t *data, uint
 	ng_encode_udp_pkt(pktdata, data, total_len);
 	return mbuf;
 }
+void handle_udp(struct rte_mbuf * mbuf, struct rte_mempool* mbuf_pool){
+	struct rte_ether_hdr *ehdr = rte_pktmbuf_mtod(mbuf, struct rte_ether_hdr*);
+	struct rte_ipv4_hdr *iphdr =  rte_pktmbuf_mtod_offset(mbuf, struct rte_ipv4_hdr *, 
+				sizeof(struct rte_ether_hdr));
+	struct rte_udp_hdr *udphdr = (struct rte_udp_hdr *)(iphdr + 1);
+	rte_memcpy(gDstMac, ehdr->s_addr.addr_bytes, RTE_ETHER_ADDR_LEN);
+	rte_memcpy(&gSrcIp, &iphdr->dst_addr, sizeof(uint32_t));
+	rte_memcpy(&gDstIp, &iphdr->src_addr, sizeof(uint32_t));
+	rte_memcpy(&gSrcPort, &udphdr->dst_port, sizeof(uint16_t));
+	rte_memcpy(&gDstPort, &udphdr->src_port, sizeof(uint16_t));
+
+	uint16_t length = ntohs(udphdr->dgram_len);
+	*((char*)udphdr + length) = '\0';
+	struct in_addr addr;
+	addr.s_addr = iphdr->src_addr;
+	printf("src: %s:%d, ", inet_ntoa(addr), ntohs(udphdr->src_port));
+	addr.s_addr = iphdr->dst_addr;
+	printf("dst: %s:%d, %s\n", inet_ntoa(addr), ntohs(udphdr->dst_port), 
+		(char *)(udphdr+1));
+	struct rte_mbuf *txbuf = ng_send_udp(mbuf_pool, (uint8_t *)(udphdr+1), length);
+				rte_eth_tx_burst(gDpdkPortId, 0, &txbuf, 1);
+				rte_pktmbuf_free(txbuf);
+	rte_pktmbuf_free(mbuf);
+}

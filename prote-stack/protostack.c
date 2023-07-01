@@ -306,7 +306,7 @@ int main(int argc, char *argv[]) {
 		for (i = 0; i < num_recvd; i++) {
 			struct rte_ether_hdr *ehdr = rte_pktmbuf_mtod(mbufs[i], struct rte_ether_hdr*);
 #if ENABLE_ARP
-			if (ehdr->ether_type == rte_cpu_to_be_16(RTE_ETHER_TYP E_ARP)) {
+			if (ehdr->ether_type == rte_cpu_to_be_16(RTE_ETHER_TYPE_ARP)) {
 				struct rte_arp_hdr *ahdr = rte_pktmbuf_mtod_offset(mbufs[i], 
 					struct rte_arp_hdr *, sizeof(struct rte_ether_hdr));
 				struct in_addr addr;

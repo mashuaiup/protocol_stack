@@ -10,7 +10,11 @@
                 "/home/mashuai/Desktop/protostack/**",
                 "/home/mashuai/Desktop/protostack/tcp/**",
                 "/home/mashuai/Desktop/protostack/udp/**",
-                "/home/mashuai/Desktop/protostack/arp/**"
+                "/home/mashuai/Desktop/protostack/arp/**",
+                "/home/mashuai/Desktop/protostack/epoll/**",
+                "/home/mashuai/Desktop/protostack/socket/**",
+                "/home/mashuai/Desktop/protostack/std/**",
+                "/usr/include/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

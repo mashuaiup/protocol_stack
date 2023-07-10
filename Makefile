@@ -20,6 +20,12 @@ VPATH += $(SRCDIR)/udp
 SRCS-y += udp.c
 VPATH += $(SRCDIR)/arp
 SRCS-y += arp.c
+VPATH += $(SRCDIR)/epoll
+SRCS-y += epoll.c
+VPATH += $(SRCDIR)/std
+SRCS-y += std.c
+VPATH += $(SRCDIR)/socket
+SRCS-y += socket.c
 
 
 # include path
@@ -27,6 +33,9 @@ CFLAGS += -I$(SRCDIR)
 CFLAGS += -I$(SRCDIR)/tcp/
 CFLAGS += -I$(SRCDIR)/udp/
 CFLAGS += -I$(SRCDIR)/arp/
+CFLAGS += -I$(SRCDIR)/std/
+CFLAGS += -I$(SRCDIR)/epoll/
+CFLAGS += -I$(SRCDIR)/socket/
 
 # build flags
 CFLAGS += -O3 -g

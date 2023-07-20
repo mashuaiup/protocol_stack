@@ -1,8 +1,9 @@
 #ifndef __SOCKET__
 #define __SOCKET__
-#include "protostack.h"
+#include <arpa/inet.h>
 #include "std.h"
 extern unsigned char fd_table[MAX_FD_COUNT];
+extern struct localhost  *lhost;
 int nsocket(__attribute__((unused)) int domain, int type, __attribute__((unused))  int protocol);
 int nbind(int sockfd, const struct sockaddr *addr,
                 __attribute__((unused))  socklen_t addrlen);
@@ -16,5 +17,7 @@ ssize_t nsendto(int sockfd, const void *buf, size_t len, __attribute__((unused))
                       const struct sockaddr *dest_addr, __attribute__((unused))  socklen_t addrlen);
 int nclose(int fd);
 
+
+void test_print(struct localhost *lhost);
 #endif
 

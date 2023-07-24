@@ -54,7 +54,7 @@ int nepoll_create(int size) {
 		return -1;
 	}
 	//struct ng_tcp_table *table = tcpInstance();
-	struct ng_epoll_table *ng_epoll_tb = epolltableInstance();
+	ng_epoll_tb = epolltableInstance();
 	ng_epoll_tb->ep = ep;
 	
 	ep->fd = epfd;

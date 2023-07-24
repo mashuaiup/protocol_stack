@@ -11,9 +11,7 @@ int ng_tcp_process(struct rte_mbuf *tcpmbuf, struct ng_tcp_table *stream_table, 
 	struct rte_tcp_hdr *tcphdr = (struct rte_tcp_hdr *)(iphdr + 1);	
 	
 	// tcp_arg_t *tcp_st = (tcp_arg_t*)stack_st->tcp_arg;
-	
 	// arp_arg_t *arp_st = (arp_arg_t*)stack_st->arp_arg;
-	
 	// tcphdr, rte_ipv4_udptcp_cksum
 	uint16_t tcpcksum = tcphdr->cksum;
 	tcphdr->cksum = 0;
@@ -96,7 +94,10 @@ int ng_tcp_out(struct rte_mempool *mbuf_pool, struct inout_ring* ioa_ring, struc
 		int nb_snd = rte_ring_mc_dequeue(stream->sndbuf, (void**)&fragment);
 		if (nb_snd < 0) continue;
 		struct rte_mbuf *tcpbuf = ng_tcp_pkt(mbuf_pool, stream->dip, stream->sip, fragment);
-		rte_ring_mp_enqueue_burst(ioa_ring->arp_ring, (void **)&tcpbuf, 1, NULL);
+		int num = rte_ring_mp_enqueue_burst(ioa_ring->arp_ring, (void **)&tcpbuf, 1, NULL);
+		if(num < 0){
+			printf("tcp 发包失败\n");
+		}
 		if (fragment->data != NULL)
 			rte_free(fragment->data);
 		rte_free(fragment);
@@ -165,20 +166,19 @@ struct ng_tcp_stream * ng_tcp_stream_create(struct conn_tuple* tuple) { // proto
 	pthread_mutex_t blank_mutex = PTHREAD_MUTEX_INITIALIZER;
 	rte_memcpy(&stream->mutex, &blank_mutex, sizeof(pthread_mutex_t));
 
-	struct ng_tcp_table *ng_tcp_tb = tcpInstance();
-	LL_ADD(stream, ng_tcp_tb->tcb_set);
+	// ng_tcp_tb = tcpInstance();
+	// LL_ADD(stream, ng_tcp_tb->tcb_set);
 
 	return stream;
 }
 
 int ng_tcp_handle_listen(struct ng_tcp_stream *stream, struct rte_ipv4_hdr *iphdr) {
-
 	struct rte_tcp_hdr *tcphdr = (struct rte_tcp_hdr *)(iphdr + 1);	
 	if (tcphdr->tcp_flags & RTE_TCP_SYN_FLAG)  {
 		//stream --> listenfd
 		if (stream->status == NG_TCP_STATUS_LISTEN) {
 
-			struct ng_tcp_table *ng_tcp_tb = tcpInstance();
+			ng_tcp_tb = tcpInstance();
 			struct conn_tuple tuple = {iphdr->src_addr, iphdr->dst_addr,tcphdr->src_port, tcphdr->dst_port};
 			// struct ng_tcp_stream *syn = ng_tcp_stream_create(&tuple);
 			struct ng_tcp_stream *syn = ng_tcp_stream_create(&tuple);
@@ -196,7 +196,6 @@ int ng_tcp_handle_listen(struct ng_tcp_stream *stream, struct rte_ipv4_hdr *iphd
 			addr.s_addr = syn->sip;
 			printf("tcp ---> src: %s:%d ", inet_ntoa(addr), ntohs(tcphdr->src_port));
 
-			
 			addr.s_addr = syn->dip;
 			printf("  ---> dst: %s:%d \n", inet_ntoa(addr), ntohs(tcphdr->dst_port));
 
@@ -210,7 +209,6 @@ int ng_tcp_handle_listen(struct ng_tcp_stream *stream, struct rte_ipv4_hdr *iphd
 			
 			fragment->data = NULL;
 			fragment->length = 0;
-
 			rte_ring_mp_enqueue(syn->sndbuf, fragment);
 			
 			syn->status = NG_TCP_STATUS_SYN_RCVD;
@@ -223,7 +221,7 @@ int ng_tcp_handle_listen(struct ng_tcp_stream *stream, struct rte_ipv4_hdr *iphd
 int ng_tcp_handle_syn_rcvd(struct ng_tcp_stream *stream, struct rte_tcp_hdr *tcphdr, struct ng_tcp_table *table, struct eventpoll *ep) {
 
 	if (tcphdr->tcp_flags & RTE_TCP_ACK_FLAG) {
-
+		printf("3.0\n");
 		if (stream->status == NG_TCP_STATUS_SYN_RCVD) {
 			uint32_t acknum = ntohl(tcphdr->recv_ack);
 			if (acknum == stream->snd_nxt + 1) {
@@ -232,16 +230,18 @@ int ng_tcp_handle_syn_rcvd(struct ng_tcp_stream *stream, struct rte_tcp_hdr *tcp
 			stream->status = NG_TCP_STATUS_ESTABLISHED;
 			// accept
 			struct conn_tuple tuple = {0, 0, 0, stream->dport};
+			printf("3.1\n");
 			struct ng_tcp_stream *listener = ng_tcp_stream_search(&tuple, table);
 			if (listener == NULL) {
 				rte_exit(EXIT_FAILURE, "ng_tcp_stream_search failed\n");
 			}
-
+			printf("3.2\n");
 			pthread_mutex_lock(&listener->mutex);
 			pthread_cond_signal(&listener->cond);
 			pthread_mutex_unlock(&listener->mutex);
-		
+		    printf("3\n");
 			epoll_event_callback(ep, listener->fd, EPOLLIN);
+			printf("4\n");
 
 		}
 
@@ -377,7 +377,7 @@ int ng_tcp_handle_last_ack(struct ng_tcp_stream *stream, struct rte_tcp_hdr *tcp
 			stream->status = NG_TCP_STATUS_CLOSED;
 
 			printf("ng_tcp_handle_last_ack\n");
-			struct ng_tcp_table *ng_tcp_tb = tcpInstance();
+			ng_tcp_tb = tcpInstance();
 			LL_REMOVE(stream, ng_tcp_tb->tcb_set);
 
 			rte_ring_free(stream->sndbuf);
@@ -403,8 +403,9 @@ int ng_encode_tcp_apppkt(uint8_t *msg, uint32_t sip, uint32_t dip,
 
 	// 1 ethhdr
 	struct rte_ether_hdr *eth = (struct rte_ether_hdr *)msg;
-	rte_memcpy(eth->s_addr.addr_bytes, 0, RTE_ETHER_ADDR_LEN);
-	rte_memcpy(eth->d_addr.addr_bytes, 0, RTE_ETHER_ADDR_LEN);
+	uint8_t gDefaultArpMac[RTE_ETHER_ADDR_LEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+	rte_memcpy(eth->s_addr.addr_bytes, gDefaultArpMac, RTE_ETHER_ADDR_LEN);
+	rte_memcpy(eth->d_addr.addr_bytes, gDefaultArpMac, RTE_ETHER_ADDR_LEN);
 	eth->ether_type = htons(RTE_ETHER_TYPE_IPV4);
 	
 

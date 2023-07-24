@@ -36,7 +36,6 @@ uint8_t* ng_get_dst_macaddr(uint32_t dip, struct arp_table *table) {
 			return iter->hwaddr;
 		}
 	}
-
 	return NULL;
 }
 
@@ -55,10 +54,10 @@ int ng_arp_entry_insert(uint32_t ip, uint8_t *mac, arp_arg_t *arp_st) {
 			rte_memcpy(entry->hwaddr, mac, RTE_ETHER_ADDR_LEN);
 			entry->type = 0;
 
-			pthread_spin_lock(&arp_st->arp_tb->spinlock);
+			// pthread_spin_lock(&arp_st->arp_tb->spinlock);
 			LL_ADD(entry, arp_st->arp_tb->entries);
 			arp_st->arp_tb->count ++;
-			pthread_spin_unlock(&arp_st->arp_tb->spinlock);
+			// pthread_spin_unlock(&arp_st->arp_tb->spinlock);
 			
 		}
 
@@ -149,29 +148,45 @@ void arp_request_timer_cb(__attribute__((unused)) struct rte_timer *tim,
 	
 }
 
+void print_list_value(struct arp_table *table){
+	printf("查看现在的arp表内容\n");
+	struct arp_entry *iter;
+	int count = table->count;
+	for (iter = table->entries; count-- != 0 && iter != NULL; iter = iter->next) {
+		struct in_addr addr;
+		addr.s_addr = iter->ip;
+		printf("ip:%s ->",inet_ntoa(addr));
+		char buf[RTE_ETHER_ADDR_FMT_SIZE];
+		rte_ether_format_addr(buf, RTE_ETHER_ADDR_FMT_SIZE, (const struct rte_ether_addr *)iter->hwaddr);
+		printf("mac:%s\n",buf);
+	}
+
+}
+
+
 void arp_process(struct rte_mbuf *arpmbuf, struct rte_mempool *mbuf_pool, arp_arg_t *arp_st, struct inout_ring *ioa_ring){
 
 	struct rte_arp_hdr *ahdr = rte_pktmbuf_mtod_offset(arpmbuf, 
 		struct rte_arp_hdr *, sizeof(struct rte_ether_hdr));
 
-	struct in_addr addr;
-	addr.s_addr = ahdr->arp_data.arp_tip;
-	printf("arp ---> src: %s ", inet_ntoa(addr));
-
-	addr.s_addr = arp_st->gLocalIp;
-	printf(" local: %s \n", inet_ntoa(addr));
-
 	if (ahdr->arp_data.arp_tip == arp_st->gLocalIp) {
+
+		struct in_addr addr;
+		addr.s_addr = ahdr->arp_data.arp_sip;
+		printf("arp ---> src: %s ", inet_ntoa(addr));
 
 		if (ahdr->arp_opcode == rte_cpu_to_be_16(RTE_ARP_OP_REQUEST)) {
 
 			printf("arp --> request\n");
 
-			struct rte_mbuf *arpbuf = ng_send_arp(mbuf_pool, RTE_ARP_OP_REPLY, ahdr->arp_data.arp_sha.addr_bytes, arp_st->gSrcMac,
+			struct rte_mbuf *arpbuf = ng_send_arp(mbuf_pool, RTE_ARP_OP_REPLY, arp_st->gSrcMac, ahdr->arp_data.arp_sha.addr_bytes, 
 				ahdr->arp_data.arp_tip, ahdr->arp_data.arp_sip);
 
 			// rte_eth_tx_burst(gDpdkPortId, 0, &arpbuf, 1);
-			rte_ring_mp_enqueue_burst(ioa_ring->out, (void**)&arpbuf, 1, NULL);
+			int num = rte_ring_mp_enqueue_burst(ioa_ring->out, (void**)&arpbuf, 1, NULL);
+			if(num < 1){
+				printf("arp协议数据包发送失败\n");
+			}
 			rte_pktmbuf_free(arpbuf);
 
 		} else if (ahdr->arp_opcode == rte_cpu_to_be_16(RTE_ARP_OP_REPLY)) {
@@ -181,8 +196,10 @@ void arp_process(struct rte_mbuf *arpmbuf, struct rte_mempool *mbuf_pool, arp_ar
 			struct arp_table *table = arp_st->arp_tb;
 
 			uint8_t *hwaddr = ng_get_dst_macaddr(ahdr->arp_data.arp_sip, table);
-			if (hwaddr == NULL) {
 
+			print_list_value(table);
+
+			if (hwaddr == NULL) {
 				struct arp_entry *entry = (struct arp_entry *)rte_malloc("arp_entry",sizeof(struct arp_entry), 0);
 				if (entry) {
 					memset(entry, 0, sizeof(struct arp_entry));
@@ -194,7 +211,7 @@ void arp_process(struct rte_mbuf *arpmbuf, struct rte_mempool *mbuf_pool, arp_ar
 					LL_ADD(entry, table->entries);
 					table->count ++;
 				}
-
+				print_list_value(table);
 			}
 			rte_pktmbuf_free(arpmbuf);
 		}
@@ -202,18 +219,17 @@ void arp_process(struct rte_mbuf *arpmbuf, struct rte_mempool *mbuf_pool, arp_ar
 }
 
 void arp_out(struct rte_mempool *mbuf_pool, struct inout_ring *ioa_ring, arp_arg_t *arp_st){
-	//fill ioa_ring packet mac addr
 	struct rte_mbuf *packets[BURST_SIZE];
 	unsigned nb_tx = rte_ring_sc_dequeue_burst(ioa_ring->arp_ring, (void**)packets, BURST_SIZE, NULL);
 	if (nb_tx > 0) {
-		// rte_eth_tx_burst(gDpdkPortId, 0, tx, nb_tx);
 		unsigned i = 0;
+		printf("arp 3\n");
 		for (i = 0;i < nb_tx;i ++) {
 			//fill srcmac dstmac and
-			struct rte_ether_hdr *ethdr = rte_pktmbuf_mtod(packets[i], struct rte_ether_hdr*);
+			struct rte_ether_hdr *ehdr = rte_pktmbuf_mtod(packets[i], struct rte_ether_hdr*);
 			struct in_addr addr;
 			uint8_t *dstmac = NULL;
-			if(ethdr->ether_type == rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4)){
+			if(ehdr->ether_type == rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4)){
 				struct rte_ipv4_hdr *iphdr = rte_pktmbuf_mtod_offset(packets[i], struct rte_ipv4_hdr *, sizeof(struct rte_ether_hdr));
 				addr.s_addr = iphdr->dst_addr;
 			}
@@ -223,15 +239,17 @@ void arp_out(struct rte_mempool *mbuf_pool, struct inout_ring *ioa_ring, arp_arg
 				uint8_t gDefaultArpMac[RTE_ETHER_ADDR_LEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 				struct rte_mbuf *arpbuf = ng_send_arp(mbuf_pool, RTE_ARP_OP_REQUEST, arp_st->gSrcMac,gDefaultArpMac, 
 				arp_st->gLocalIp, addr.s_addr);
-
+				rte_ring_mp_enqueue_burst(ioa_ring->out, (void**)&arpbuf, 1, NULL);
 				//copy
-				rte_ring_mp_enqueue_burst(ioa_ring->arp_ring, (void **)packets[i], 1, NULL);
-
+				int num = rte_ring_sp_enqueue_burst(ioa_ring->arp_ring, (void **)&packets[i], 1, NULL);
 			}else{
 				//send packet into out_ring
-				rte_memcpy(ethdr->s_addr.addr_bytes, arp_st->gSrcMac, RTE_ETHER_ADDR_LEN);
-				rte_memcpy(ethdr->d_addr.addr_bytes, dstmac         , RTE_ETHER_ADDR_LEN);
-				rte_ring_mp_enqueue_burst(ioa_ring->out, (void **)packets[i], 1, NULL);
+				rte_memcpy(ehdr->s_addr.addr_bytes, arp_st->gSrcMac, RTE_ETHER_ADDR_LEN);
+				rte_memcpy(ehdr->d_addr.addr_bytes, dstmac         , RTE_ETHER_ADDR_LEN);
+				int num = rte_ring_mp_enqueue_burst(ioa_ring->out, (void **)&packets[i], 1, NULL);
+				if(num < 0){
+					printf("arp层复制数据至ring->out失败\n");
+				}
 			}
 			rte_pktmbuf_free(packets[i]);
 		}

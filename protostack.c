@@ -5,7 +5,7 @@
 #include "protostack.h"
 #include <rte_ether.h>
 
-uint32_t gLocalIp = MAKE_IPV4_ADDR(192, 168, 114, 199);
+uint32_t gLocalIp = MAKE_IPV4_ADDR(192, 168, 0, 199);
 
 int gDpdkPortId = 0;
 static const struct rte_eth_conf port_conf_default = {
@@ -50,8 +50,6 @@ static int pkt_process(void *arg) {
 		struct rte_mbuf *mbufs[BURST_SIZE];
 		unsigned num_recvd = rte_ring_mc_dequeue_burst(ring->in, (void**)mbufs, BURST_SIZE, NULL);
 		unsigned i = 0;
-		if (num_recvd > 0)
-			printf("num_recvd: %d \n", num_recvd);
 		for (i = 0;i < num_recvd; i++) {
 			struct rte_ether_hdr *ehdr = rte_pktmbuf_mtod(mbufs[i], struct rte_ether_hdr*);
 			if (ehdr->ether_type == rte_cpu_to_be_16(RTE_ETHER_TYPE_ARP)) {
@@ -60,20 +58,20 @@ static int pkt_process(void *arg) {
 			if (ehdr->ether_type == rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4)) {
 				struct rte_ipv4_hdr *iphdr =  rte_pktmbuf_mtod_offset(mbufs[i], struct rte_ipv4_hdr *, 
 				sizeof(struct rte_ether_hdr));
-				// ng_arp_entry_insert(iphdr->src_addr, ehdr->s_addr.addr_bytes, arp_st);
+				ng_arp_entry_insert(iphdr->src_addr, ehdr->s_addr.addr_bytes, arp_st);
 				if (iphdr->next_proto_id == IPPROTO_UDP) {
-					struct localhost *lhost = localhostInstance();
+					lhost = localhostInstance();
 					udp_process(mbufs[i], lhost);
 				} else if (iphdr->next_proto_id == IPPROTO_TCP) {
-					struct ng_tcp_table *ng_tcp_tb  = tcpInstance();
-					struct ng_epoll_table *ng_epoll_tb  = epolltableInstance();
+					ng_tcp_tb  = tcpInstance();
+					ng_epoll_tb  = epolltableInstance();
 					ng_tcp_process(mbufs[i], ng_tcp_tb, ng_epoll_tb);
 				}
 			} 
 		}
-		struct localhost *lhost = localhostInstance();
+		lhost = localhostInstance();
 		udp_out(mbuf_pool, ring, lhost);
-		struct ng_tcp_table *ng_tcp_tb  = tcpInstance();
+		ng_tcp_tb  = tcpInstance();
 		ng_tcp_out(mbuf_pool, ring, ng_tcp_tb);
 		arp_out(mbuf_pool, ring, arp_st);
 	}

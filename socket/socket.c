@@ -10,6 +10,7 @@ void test_print(struct localhost *lhost){
 
 	printf("开始遍历lhost\n");
 	struct localhost *host;
+	lhost = localhostInstance();
 	for (host = lhost; host != NULL;host = host->next) {
         printf("fd is:%d\n", host->fd);
 	}
@@ -20,7 +21,6 @@ int nsocket(__attribute__((unused)) int domain, int type, __attribute__((unused)
 	int fd = get_fd_frombitmap(fd_table); //
 
 	if (type == SOCK_DGRAM) {
-		printf("udp开始进入创建socket, 并且fd为:%d\n", fd);
 		struct localhost *host = rte_malloc("localhost", sizeof(struct localhost), 0);
 		if (host == NULL) {
 			return -1;
@@ -49,9 +49,10 @@ int nsocket(__attribute__((unused)) int domain, int type, __attribute__((unused)
 
 		pthread_mutex_t blank_mutex = PTHREAD_MUTEX_INITIALIZER;
 		rte_memcpy(&host->mutex, &blank_mutex, sizeof(pthread_mutex_t));
-		struct localhost *lhost = localhostInstance();
+		lhost = localhostInstance();
 		
 		LL_ADD(host, lhost);  //在一个函数里面去修改一个非参数传进来的值，这个值该如何共享
+		lhost = localhostInstance();
 		test_print(lhost); 
 
 	} else if (type == SOCK_STREAM) {
@@ -83,7 +84,7 @@ int nsocket(__attribute__((unused)) int domain, int type, __attribute__((unused)
 		pthread_mutex_t blank_mutex = PTHREAD_MUTEX_INITIALIZER;
 		rte_memcpy(&stream->mutex, &blank_mutex, sizeof(pthread_mutex_t));
 
-		struct ng_tcp_table *ng_tcp_tb = tcpInstance();
+		ng_tcp_tb = tcpInstance();
 		LL_ADD(stream, ng_tcp_tb->tcb_set); //hash  
 		
 		// get_stream_from_fd();
@@ -94,21 +95,20 @@ int nsocket(__attribute__((unused)) int domain, int type, __attribute__((unused)
 int nbind(int sockfd, const struct sockaddr *addr,
                 __attribute__((unused)) socklen_t addrlen) {
 	
-	struct localhost *lhost = localhostInstance();
-	void *hostinfo = get_hostinfo_fromfd(sockfd, lhost);
+	void *hostinfo = get_hostinfo_fromfd(sockfd);
 	if (hostinfo == NULL) {
-		struct ng_tcp_table *ng_tcp_tb = tcpInstance();
+		ng_tcp_tb = tcpInstance();
 		struct ng_tcp_stream *stream = get_stream_info_fromfd(sockfd, ng_tcp_tb);
 		if(stream){
 			const struct sockaddr_in *laddr = (const struct sockaddr_in *)addr;
 			stream->dport = laddr->sin_port;
 			rte_memcpy(&stream->dip, &laddr->sin_addr.s_addr, sizeof(uint32_t));
-			// rte_memcpy(stream->localmac, gSrcMac, RTE_ETHER_ADDR_LEN);
 			stream->status = NG_TCP_STATUS_CLOSED;
 		}else{
 			return -1;
 		}
 	}else{
+		printf("udp start to init ip and port!!!\n");
 		struct localhost *host = (struct localhost *)hostinfo;
 		const struct sockaddr_in *laddr = (const struct sockaddr_in *)addr;
 		host->localport = laddr->sin_port;
@@ -118,7 +118,7 @@ int nbind(int sockfd, const struct sockaddr *addr,
 }
 
 int nlisten(int sockfd, __attribute__((unused)) int backlog) { //
-	struct ng_tcp_table *ng_tcp_tb = tcpInstance();
+	ng_tcp_tb = tcpInstance();
 	struct ng_tcp_stream *stream = get_stream_info_fromfd(sockfd, ng_tcp_tb);
 	if(stream == NULL) return -1;
 		
@@ -129,7 +129,7 @@ int nlisten(int sockfd, __attribute__((unused)) int backlog) { //
 }
 
 int naccept(int sockfd, struct sockaddr *addr, __attribute__((unused)) socklen_t *addrlen) {
-	struct ng_tcp_table *ng_tcp_tb = tcpInstance();
+	ng_tcp_tb = tcpInstance();
 	struct ng_tcp_stream *stream = get_stream_info_fromfd(sockfd, ng_tcp_tb);
 	if(stream == NULL) return -1;
 
@@ -152,7 +152,7 @@ int naccept(int sockfd, struct sockaddr *addr, __attribute__((unused)) socklen_t
 ssize_t nsend(int sockfd, const void *buf, size_t len,__attribute__((unused)) int flags) {
 	ssize_t length = 0;
 
-	struct ng_tcp_table *ng_tcp_tb = tcpInstance();
+	ng_tcp_tb = tcpInstance();
 	struct ng_tcp_stream *stream = get_stream_info_fromfd(sockfd, ng_tcp_tb);
 	if(stream == NULL) return -1;
 
@@ -189,7 +189,7 @@ ssize_t nsend(int sockfd, const void *buf, size_t len,__attribute__((unused)) in
 ssize_t nrecv(int sockfd, void *buf, size_t len, __attribute__((unused)) int flags) {
 	ssize_t length = 0;
 
-	struct ng_tcp_table *ng_tcp_tb = tcpInstance();
+	ng_tcp_tb = tcpInstance();
 	struct ng_tcp_stream *stream = get_stream_info_fromfd(sockfd, ng_tcp_tb);
 	if(stream == NULL) return -1;
 
@@ -229,8 +229,7 @@ ssize_t nrecv(int sockfd, void *buf, size_t len, __attribute__((unused)) int fla
 ssize_t nrecvfrom(int sockfd, void *buf, size_t len, __attribute__((unused))  int flags,
                         struct sockaddr *src_addr, __attribute__((unused))  socklen_t *addrlen) {
 	
-	struct localhost *lhost = localhostInstance();
-	struct localhost *host =  get_hostinfo_fromfd(sockfd, lhost);
+	struct localhost *host =  get_hostinfo_fromfd(sockfd);
 	if (host == NULL) return -1;
 
 	struct offload *ol = NULL;
@@ -280,8 +279,7 @@ ssize_t nsendto(int sockfd, const void *buf, size_t len, __attribute__((unused))
                       const struct sockaddr *dest_addr, __attribute__((unused))  socklen_t addrlen) {
 
 	
-	struct localhost *lhost = localhostInstance();
-	struct localhost *host =  get_hostinfo_fromfd(sockfd, lhost);
+	struct localhost *host =  get_hostinfo_fromfd(sockfd);
 	if (host == NULL) return -1;
 
 	const struct sockaddr_in *daddr = (const struct sockaddr_in *)dest_addr;
@@ -298,6 +296,8 @@ ssize_t nsendto(int sockfd, const void *buf, size_t len, __attribute__((unused))
 	struct in_addr addr;
 	addr.s_addr = ol->dip;
 	printf("nsendto ---> src: %s:%d \n", inet_ntoa(addr), ntohs(ol->dport));
+	addr.s_addr = ol->sip;
+	printf("nsendto ---> drc: %s:%d \n", inet_ntoa(addr), ntohs(ol->dport));
 	
 	ol->data = rte_malloc("unsigned char *", len, 0);
 	if (ol->data == NULL) {
@@ -313,10 +313,9 @@ ssize_t nsendto(int sockfd, const void *buf, size_t len, __attribute__((unused))
 }
 
 int nclose(int fd) {
-	struct localhost *lhost = localhostInstance();
-	struct localhost *host = get_hostinfo_fromfd(fd, lhost);
+	struct localhost *host = get_hostinfo_fromfd(fd);
 	if (host == NULL) {
-		struct ng_tcp_table *ng_tcp_tb = tcpInstance();
+		ng_tcp_tb = tcpInstance();
 		struct ng_tcp_stream *stream = get_stream_info_fromfd(fd, ng_tcp_tb);
 		if(stream){
 			if (stream->status != NG_TCP_STATUS_LISTEN) {
@@ -340,7 +339,7 @@ int nclose(int fd) {
 				set_fd_frombitmap(fd, fd_table);
 
 			} else { // nsocket
-				struct ng_tcp_table *ng_tcp_tb = tcpInstance();
+				ng_tcp_tb = tcpInstance();
 				LL_REMOVE(stream, ng_tcp_tb->tcb_set);	
 				rte_free(stream);
 			}

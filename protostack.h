@@ -26,6 +26,5 @@ extern int         gDpdkPortId;
 extern uint32_t    gLocalIp;
  
 
-struct localhost * get_hostinfo_fromip_port(uint32_t dip, uint16_t port, uint8_t proto, struct localhost *lhost);
 int stack_info_init(stack_arg_t *stack_arg);
 #endif

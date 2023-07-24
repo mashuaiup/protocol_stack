@@ -203,12 +203,11 @@ struct ng_epoll_table *epolltableInstance(void);
 
 struct ng_tcp_stream* get_accept_tcb(uint16_t dport);
 
-void *get_hostinfo_fromfd(int sockfd, struct localhost *lhost);
 int  set_fd_frombitmap(int fd, unsigned char* fd_table);
 int  get_fd_frombitmap(unsigned char* fd_table);
-struct localhost * get_hostinfo_fromip_port(uint32_t dip, uint16_t port, uint8_t proto, struct localhost *listhdr);
+struct localhost * get_hostinfo_fromip_port(uint32_t dip, uint16_t port, uint8_t proto);
 
-void* get_hostinfo_fromfd(int sockfd, struct localhost *lhost);
+void* get_hostinfo_fromfd(int sockfd);
 void* get_stream_info_fromfd(int sockfd, struct ng_tcp_table *table);
 void* get_epoll_info_fromfd(int sockfd, struct ng_epoll_table *ng_epoll_tb);
 

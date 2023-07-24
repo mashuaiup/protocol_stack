@@ -53,11 +53,11 @@ int get_fd_frombitmap(unsigned char* fd_table) {
 	return -1;
 }
 
-struct localhost * get_hostinfo_fromip_port(uint32_t dip, uint16_t port, uint8_t proto, struct localhost *listhdr) {
+struct localhost * get_hostinfo_fromip_port(uint32_t dip, uint16_t port, uint8_t proto) {
 
 	struct localhost *host;
-
-	for (host = listhdr; host != NULL; host = host->next) {
+	lhost = localhostInstance();
+	for (host = lhost; host != NULL; host = host->next) {
 		if (dip == host->localip && port == host->localport && proto == host->protocol) {
 			return host;
 		}
@@ -65,11 +65,11 @@ struct localhost * get_hostinfo_fromip_port(uint32_t dip, uint16_t port, uint8_t
 	return NULL;
 }
 
-void* get_hostinfo_fromfd(int sockfd, struct localhost *lhost) {
+void* get_hostinfo_fromfd(int sockfd) {
 	
 	struct localhost *host;
+	lhost = localhostInstance();
 	for (host = lhost; host != NULL;host = host->next) {
-
 		if (sockfd == host->fd) {
 			return host;
 		}
@@ -98,7 +98,7 @@ void* get_epoll_info_fromfd(int sockfd, struct ng_epoll_table *ng_epoll_tb){
 
 struct ng_tcp_stream *get_accept_tcb(uint16_t dport) {
 	struct ng_tcp_stream *apt;
-	struct ng_tcp_table  *ng_tcp_tb = tcpInstance();
+	ng_tcp_tb = tcpInstance();
 	for (apt = ng_tcp_tb->tcb_set;apt != NULL;apt = apt->next) {
 		if (dport == apt->dport && apt->fd == -1) {
 			return apt;

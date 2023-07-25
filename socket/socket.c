@@ -50,7 +50,6 @@ int nsocket(__attribute__((unused)) int domain, int type, __attribute__((unused)
 		pthread_mutex_t blank_mutex = PTHREAD_MUTEX_INITIALIZER;
 		rte_memcpy(&host->mutex, &blank_mutex, sizeof(pthread_mutex_t));
 		lhost = localhostInstance();
-		
 		LL_ADD(host, lhost);  //在一个函数里面去修改一个非参数传进来的值，这个值该如何共享
 		lhost = localhostInstance();
 		test_print(lhost); 

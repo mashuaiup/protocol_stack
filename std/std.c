@@ -1,9 +1,16 @@
 #include "std.h"
 #include <rte_malloc.h>
 #include <string.h>
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+
+pthread_mutex_t lhostmutex;
+
 struct localhost        *lhost       =NULL;
 struct ng_tcp_table     *ng_tcp_tb   =NULL;
 struct ng_epoll_table   *ng_epoll_tb =NULL;
+
 unsigned char fd_table[MAX_FD_COUNT] = {0};
 
 struct ng_tcp_table *tcpInstance(void) {
@@ -17,11 +24,16 @@ struct ng_tcp_table *tcpInstance(void) {
 }
 
 struct localhost *localhostInstance(void) {
-	if (lhost == NULL) {
+	pthread_mutex_lock(&lhostmutex);
+	if(lhost != NULL){
+		pthread_mutex_unlock(&lhostmutex);
+		return lhost;
+	}else{
 		lhost = rte_malloc("localhost", sizeof(struct localhost), 0);
 		memset(lhost, 0, sizeof(struct localhost));
+		pthread_mutex_unlock(&lhostmutex);
+		return lhost;
 	}
-	return lhost;
 }
 
 struct ng_epoll_table *epolltableInstance(void) {

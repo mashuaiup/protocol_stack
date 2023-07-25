@@ -126,6 +126,7 @@ int main(int argc, char *argv[]) {
 		rte_exit(EXIT_FAILURE, "Error with EAL init\n");
 	}
 	stack_arg_t sat;
+	pthread_mutex_init(&lhostmutex, NULL);
 	int res = stack_info_init(&sat);
 	if(res == 0){
 		rte_exit(EXIT_FAILURE, "Init stack info failed\n");
@@ -144,6 +145,7 @@ int main(int argc, char *argv[]) {
 	rte_eal_remote_launch(udp_server_entry, &sat, lcore_id);
 	lcore_id = rte_get_next_lcore(lcore_id, 1, 0);
 	rte_eal_remote_launch(tcp_server_entry, &sat, lcore_id);
+
 	while(1) {
 		// rx
 		struct rte_mbuf *rx[BURST_SIZE];

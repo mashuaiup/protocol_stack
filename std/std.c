@@ -6,6 +6,8 @@
 #include <unistd.h>
 
 pthread_mutex_t lhostmutex;
+pthread_mutex_t tcp_tb_mutex;
+pthread_mutex_t epoll_tb_mutex;
 
 struct localhost        *lhost       =NULL;
 struct ng_tcp_table     *ng_tcp_tb   =NULL;
@@ -14,13 +16,16 @@ struct ng_epoll_table   *ng_epoll_tb =NULL;
 unsigned char fd_table[MAX_FD_COUNT] = {0};
 
 struct ng_tcp_table *tcpInstance(void) {
-
-	if (ng_tcp_tb == NULL) {
+	pthread_mutex_lock(&tcp_tb_mutex);
+	if(ng_tcp_tb != NULL){
+		pthread_mutex_unlock(&tcp_tb_mutex);
+		return ng_tcp_tb;
+	}else{
 		ng_tcp_tb = rte_malloc("ng_tcp_table", sizeof(struct ng_tcp_table), 0);
 		memset(ng_tcp_tb, 0, sizeof(struct ng_tcp_table));
-		
+		pthread_mutex_unlock(&tcp_tb_mutex);
+		return ng_tcp_tb;
 	}
-	return ng_tcp_tb;
 }
 
 struct localhost *localhostInstance(void) {
@@ -37,11 +42,18 @@ struct localhost *localhostInstance(void) {
 }
 
 struct ng_epoll_table *epolltableInstance(void) {
-	if (ng_epoll_tb == NULL) {
+
+	pthread_mutex_lock(&epoll_tb_mutex);
+	if(ng_epoll_tb != NULL){
+		pthread_mutex_unlock(&epoll_tb_mutex);
+		return ng_epoll_tb;
+	}else{
 		ng_epoll_tb = rte_malloc("eptbInstance", sizeof(struct ng_epoll_table), 0);
 		memset(ng_epoll_tb, 0, sizeof(struct ng_epoll_table));
+		pthread_mutex_unlock(&epoll_tb_mutex);
+		return ng_epoll_tb;
 	}
-	return ng_epoll_tb;
+
 }
 
 int set_fd_frombitmap(int fd, unsigned char* fd_table) {

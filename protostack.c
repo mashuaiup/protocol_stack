@@ -126,11 +126,15 @@ int main(int argc, char *argv[]) {
 		rte_exit(EXIT_FAILURE, "Error with EAL init\n");
 	}
 	stack_arg_t sat;
-	pthread_mutex_init(&lhostmutex, NULL);
 	int res = stack_info_init(&sat);
 	if(res == 0){
 		rte_exit(EXIT_FAILURE, "Init stack info failed\n");
 	}
+
+	pthread_mutex_init(&lhostmutex, NULL);
+	pthread_mutex_init(&tcp_tb_mutex, NULL);
+	pthread_mutex_init(&epoll_tb_mutex, NULL);
+
 	port_init((&sat)->mbuf_pool);
 	rte_timer_subsystem_init();
 	struct rte_timer arp_timer;

@@ -7,6 +7,9 @@
 #include <sys/queue.h>
 
 extern pthread_mutex_t lhostmutex;
+extern pthread_mutex_t tcp_tb_mutex;
+extern pthread_mutex_t epoll_tb_mutex;
+
 //list
 #define LL_ADD(item, list) do {		\
 	item->prev = NULL;				\

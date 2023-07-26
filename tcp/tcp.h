@@ -7,24 +7,14 @@
 #include <rte_tcp.h>
 #include <rte_ip.h>
 #include <rte_malloc.h>
-
 #define TCP_MAX_SQE         4294967296
-
 #define BUFFER_SIZE	        1024
-
-
-
 struct conn_tuple {
 	uint32_t sip;
 	uint32_t dip; 
 	uint16_t sport; 
 	uint16_t dport;
 };
-
-
-
-// void ng_encode_tcp_pkt(uint8_t * pkt, tcp_stream *tcp_stream_item, struct rte_ether_hdr *ethdr_received);
-
 int ng_tcp_process(struct rte_mbuf *tcpmbuf, struct ng_tcp_table *stream_table, struct ng_epoll_table *epoll_tb_lhead);
 int ng_tcp_out(struct rte_mempool *mbuf_pool, struct inout_ring* ioa_ring, struct ng_tcp_table *table);
 struct rte_mbuf *ng_tcp_pkt(struct rte_mempool *mbuf_pool, uint32_t sip, uint32_t dip, struct ng_tcp_fragment *fragment);

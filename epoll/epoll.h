@@ -1,13 +1,10 @@
 #ifndef __EPOLL__
 #define __EPOLL__
-// #include "protostack.h"
-// #include "nty_tree.h"
 #include <sys/queue.h>
 #include <time.h>
 #include "std.h"
 #include <errno.h>
 #include <rte_errno.h>
-// #include <rte_timer.h>
 #define CLOCK_REALTIME			0
 extern unsigned char fd_table[MAX_FD_COUNT];
 enum EPOLL_EVENTS {
@@ -30,10 +27,6 @@ enum EPOLL_EVENTS {
 #define EPOLL_CTL_ADD	1
 #define EPOLL_CTL_DEL	2
 #define EPOLL_CTL_MOD	3
-
-// typedef struct epoll_arg{
-// 	struct ng_epoll_table *epoll_table; // single epoll
-// }epoll_arg_t;
 
 int sockfd_cmp(struct epitem *ep1, struct epitem *ep2);
 int epoll_event_callback(struct eventpoll *ep, int sockid, uint32_t event);

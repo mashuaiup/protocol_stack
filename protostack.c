@@ -45,7 +45,6 @@ static int pkt_process(void *arg) {
 	struct rte_mempool *mbuf_pool = stack_st->mbuf_pool;
 	struct inout_ring *ring = stack_st->io_ring;
 	arp_arg_t *arp_st = (arp_arg_t*)stack_st->arp_arg;
-	// tcp_arg_t *tcp_st = (tcp_arg_t*)stack_st->tcp_arg;
 	while (1) {
 		struct rte_mbuf *mbufs[BURST_SIZE];
 		unsigned num_recvd = rte_ring_mc_dequeue_burst(ring->in, (void**)mbufs, BURST_SIZE, NULL);
@@ -58,7 +57,6 @@ static int pkt_process(void *arg) {
 			if (ehdr->ether_type == rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4)) {
 				struct rte_ipv4_hdr *iphdr =  rte_pktmbuf_mtod_offset(mbufs[i], struct rte_ipv4_hdr *, 
 				sizeof(struct rte_ether_hdr));
-				// ng_arp_entry_insert(iphdr->src_addr, ehdr->s_addr.addr_bytes, arp_st);
 				if (iphdr->next_proto_id == IPPROTO_UDP) {
 					lhost = localhostInstance();
 					udp_process(mbufs[i], lhost);

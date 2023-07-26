@@ -85,9 +85,7 @@ int udp_server_entry(__attribute__((unused))  void *arg) {
 
 		if (nrecvfrom(connfd, buffer, UDP_APP_RECV_BUFFER_SIZE, 0, 
 			(struct sockaddr*)&clientaddr, &addrlen) < 0) {
-
 			continue;
-
 		} else {
 
 			printf("recv from %s:%d, data:%s\n", inet_ntoa(clientaddr.sin_addr), 
@@ -113,7 +111,7 @@ int udp_process(struct rte_mbuf *udpmbuf, struct localhost *udp_tb_lhead) {
 
 	struct localhost *host = get_hostinfo_fromip_port(iphdr->dst_addr, udphdr->dst_port, iphdr->next_proto_id);
 	if (host == NULL) {
-		printf("udp的目的ip和端口与服务器不匹配\n");
+		printf("udp request packet dip is not match localhost\n");
 		rte_pktmbuf_free(udpmbuf);
 		return -3;
 	} 
@@ -167,7 +165,7 @@ void udp_out(struct rte_mempool *mbuf_pool, struct inout_ring* ioa_ring, struct 
 		struct rte_mbuf *udpbuf = ng_udp_pkt(mbuf_pool, ol->sip, ol->dip, ol->sport, ol->dport, ol->data, ol->length);
 		int num = rte_ring_sp_enqueue_burst(ioa_ring->arp_ring, (void **)&udpbuf, 1, NULL);
 		if(num <= 0){
-			printf("数据存入ioa_ring->arp_ring失败\n");
+			printf("udp packet add into arp_ring failed\n");
 		}
 		if (ol->data != NULL){
 			rte_free(ol->data);

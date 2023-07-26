@@ -10,8 +10,6 @@ int ng_tcp_process(struct rte_mbuf *tcpmbuf, struct ng_tcp_table *stream_table, 
 				sizeof(struct rte_ether_hdr));
 	struct rte_tcp_hdr *tcphdr = (struct rte_tcp_hdr *)(iphdr + 1);	
 	
-	// tcp_arg_t *tcp_st = (tcp_arg_t*)stack_st->tcp_arg;
-	// arp_arg_t *arp_st = (arp_arg_t*)stack_st->arp_arg;
 	// tcphdr, rte_ipv4_udptcp_cksum
 	uint16_t tcpcksum = tcphdr->cksum;
 	tcphdr->cksum = 0;
@@ -36,13 +34,10 @@ int ng_tcp_process(struct rte_mbuf *tcpmbuf, struct ng_tcp_table *stream_table, 
 			break;
 			
 		case NG_TCP_STATUS_LISTEN: // server
-			// ng_tcp_handle_listen(stream, iphdr, stream_table, arp_st->gSrcMac);
 			ng_tcp_handle_listen(stream, iphdr);
 			break;
 
 		case NG_TCP_STATUS_SYN_RCVD: // server
-			// epoll_arg_t *epoll_st = (epoll_arg_t*)stack_st->epoll_arg;
-			// struct eventpoll *ep = epoll_tb_lhead->ep;
 			ng_tcp_handle_syn_rcvd(stream, (struct rte_tcp_hdr *)tcphdr, stream_table, epoll_tb_lhead->ep);
 			break;
 
@@ -77,7 +72,6 @@ int ng_tcp_process(struct rte_mbuf *tcpmbuf, struct ng_tcp_table *stream_table, 
 			break;
 
 	}
-
 	rte_pktmbuf_free(tcpmbuf);
 	return 0;
 }
@@ -96,7 +90,7 @@ int ng_tcp_out(struct rte_mempool *mbuf_pool, struct inout_ring* ioa_ring, struc
 		struct rte_mbuf *tcpbuf = ng_tcp_pkt(mbuf_pool, stream->dip, stream->sip, fragment);
 		int num = rte_ring_mp_enqueue_burst(ioa_ring->arp_ring, (void **)&tcpbuf, 1, NULL);
 		if(num < 0){
-			printf("tcp 发包失败\n");
+			printf("tcp packet add into arp_ring failed\n");
 		}
 		if (fragment->data != NULL)
 			rte_free(fragment->data);
@@ -108,7 +102,6 @@ int ng_tcp_out(struct rte_mempool *mbuf_pool, struct inout_ring* ioa_ring, struc
 
 struct ng_tcp_stream * ng_tcp_stream_search(struct conn_tuple *tuple, struct ng_tcp_table *table) { // proto
 
-	// struct ng_tcp_table *ng_tcp_tb = tcpInstance();
 	struct ng_tcp_stream *iter;
 	for (iter = table->tcb_set;iter != NULL; iter = iter->next) { // established
 
@@ -116,7 +109,6 @@ struct ng_tcp_stream * ng_tcp_stream_search(struct conn_tuple *tuple, struct ng_
 			iter->sport == tuple->sport && iter->dport == tuple->dport) {
 			return iter;
 		}
-
 	}
 
 	for (iter = table->tcb_set;iter != NULL; iter = iter->next) {
@@ -124,7 +116,6 @@ struct ng_tcp_stream * ng_tcp_stream_search(struct conn_tuple *tuple, struct ng_
 		if (iter->dport == tuple->dport && iter->status == NG_TCP_STATUS_LISTEN) { // listen
 			return iter;
 		}
-
 	}
 
 	return NULL;
@@ -145,7 +136,6 @@ struct ng_tcp_stream * ng_tcp_stream_create(struct conn_tuple* tuple) { // proto
 
 	stream->status = NG_TCP_STATUS_LISTEN;
 
-	printf("ng_tcp_stream_create\n");
 	//
 	char sbufname[32] = {0};
 	sprintf(sbufname, "sndbuf%x%d", tuple->sip, tuple->sport);
@@ -166,9 +156,6 @@ struct ng_tcp_stream * ng_tcp_stream_create(struct conn_tuple* tuple) { // proto
 	pthread_mutex_t blank_mutex = PTHREAD_MUTEX_INITIALIZER;
 	rte_memcpy(&stream->mutex, &blank_mutex, sizeof(pthread_mutex_t));
 
-	// ng_tcp_tb = tcpInstance();
-	// LL_ADD(stream, ng_tcp_tb->tcb_set);
-
 	return stream;
 }
 
@@ -180,7 +167,6 @@ int ng_tcp_handle_listen(struct ng_tcp_stream *stream, struct rte_ipv4_hdr *iphd
 
 			ng_tcp_tb = tcpInstance();
 			struct conn_tuple tuple = {iphdr->src_addr, iphdr->dst_addr,tcphdr->src_port, tcphdr->dst_port};
-			// struct ng_tcp_stream *syn = ng_tcp_stream_create(&tuple);
 			struct ng_tcp_stream *syn = ng_tcp_stream_create(&tuple);
 			LL_ADD(syn, ng_tcp_tb->tcb_set);
 
@@ -221,7 +207,6 @@ int ng_tcp_handle_listen(struct ng_tcp_stream *stream, struct rte_ipv4_hdr *iphd
 int ng_tcp_handle_syn_rcvd(struct ng_tcp_stream *stream, struct rte_tcp_hdr *tcphdr, struct ng_tcp_table *table, struct eventpoll *ep) {
 
 	if (tcphdr->tcp_flags & RTE_TCP_ACK_FLAG) {
-		printf("3.0\n");
 		if (stream->status == NG_TCP_STATUS_SYN_RCVD) {
 			uint32_t acknum = ntohl(tcphdr->recv_ack);
 			if (acknum == stream->snd_nxt + 1) {
@@ -230,19 +215,14 @@ int ng_tcp_handle_syn_rcvd(struct ng_tcp_stream *stream, struct rte_tcp_hdr *tcp
 			stream->status = NG_TCP_STATUS_ESTABLISHED;
 			// accept
 			struct conn_tuple tuple = {0, 0, 0, stream->dport};
-			printf("3.1\n");
 			struct ng_tcp_stream *listener = ng_tcp_stream_search(&tuple, table);
 			if (listener == NULL) {
 				rte_exit(EXIT_FAILURE, "ng_tcp_stream_search failed\n");
 			}
-			printf("3.2\n");
 			pthread_mutex_lock(&listener->mutex);
 			pthread_cond_signal(&listener->cond);
 			pthread_mutex_unlock(&listener->mutex);
-		    printf("3\n");
 			epoll_event_callback(ep, listener->fd, EPOLLIN);
-			printf("4\n");
-
 		}
 
 	}
@@ -376,7 +356,6 @@ int ng_tcp_handle_last_ack(struct ng_tcp_stream *stream, struct rte_tcp_hdr *tcp
 
 			stream->status = NG_TCP_STATUS_CLOSED;
 
-			printf("ng_tcp_handle_last_ack\n");
 			ng_tcp_tb = tcpInstance();
 			LL_REMOVE(stream, ng_tcp_tb->tcb_set);
 

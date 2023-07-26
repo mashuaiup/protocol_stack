@@ -43,7 +43,6 @@ int epoll_event_callback(struct eventpoll *ep, int sockid, uint32_t event) {
 	pthread_mutex_unlock(&ep->cdmtx);
 }
 
-// eventpoll --> tcp_table->ep;
 int nepoll_create(int size) {
 	if (size <= 0) return -1;
 	//epfd --> struct eventpoll
@@ -53,7 +52,6 @@ int nepoll_create(int size) {
 		set_fd_frombitmap(epfd, fd_table);
 		return -1;
 	}
-	//struct ng_tcp_table *table = tcpInstance();
 	ng_epoll_tb = epolltableInstance();
 	ng_epoll_tb->ep = ep;
 	

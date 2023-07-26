@@ -1,20 +1,9 @@
 #include "socket.h"
-// #include "tcp.h"
 #include <rte_tcp.h>
 #include <rte_malloc.h>
 #include <rte_ring.h>
 #include <string.h>
 #include <rte_memcpy.h>
-
-void test_print(struct localhost *lhost){
-
-	printf("开始遍历lhost\n");
-	struct localhost *host;
-	lhost = localhostInstance();
-	for (host = lhost; host != NULL;host = host->next) {
-        printf("fd is:%d\n", host->fd);
-	}
-}
 
 int nsocket(__attribute__((unused)) int domain, int type, __attribute__((unused))  int protocol) {
 
@@ -50,9 +39,7 @@ int nsocket(__attribute__((unused)) int domain, int type, __attribute__((unused)
 		pthread_mutex_t blank_mutex = PTHREAD_MUTEX_INITIALIZER;
 		rte_memcpy(&host->mutex, &blank_mutex, sizeof(pthread_mutex_t));
 		lhost = localhostInstance();
-		LL_ADD(host, lhost);  //在一个函数里面去修改一个非参数传进来的值，这个值该如何共享
-		lhost = localhostInstance();
-		test_print(lhost); 
+		LL_ADD(host, lhost); 
 
 	} else if (type == SOCK_STREAM) {
 		struct ng_tcp_stream *stream = rte_malloc("ng_tcp_stream", sizeof(struct ng_tcp_stream), 0);
@@ -65,7 +52,6 @@ int nsocket(__attribute__((unused)) int domain, int type, __attribute__((unused)
 		stream->next = stream->prev = NULL;
 		stream->rcvbuf = rte_ring_create("tcp recv buffer", RING_SIZE, rte_socket_id(), RING_F_SP_ENQ | RING_F_SC_DEQ);
 		if (stream->rcvbuf == NULL) {
-
 			rte_free(stream);
 			return -1;
 		}
@@ -85,8 +71,6 @@ int nsocket(__attribute__((unused)) int domain, int type, __attribute__((unused)
 
 		ng_tcp_tb = tcpInstance();
 		LL_ADD(stream, ng_tcp_tb->tcb_set); //hash  
-		
-		// get_stream_from_fd();
 	}
 	return fd;
 }
@@ -107,7 +91,6 @@ int nbind(int sockfd, const struct sockaddr *addr,
 			return -1;
 		}
 	}else{
-		printf("udp start to init ip and port!!!\n");
 		struct localhost *host = (struct localhost *)hostinfo;
 		const struct sockaddr_in *laddr = (const struct sockaddr_in *)addr;
 		host->localport = laddr->sin_port;
@@ -195,13 +178,11 @@ ssize_t nrecv(int sockfd, void *buf, size_t len, __attribute__((unused)) int fla
 	if (stream->protocol == IPPROTO_TCP) {
 		struct ng_tcp_fragment *fragment = NULL;
 		int nb_rcv = 0;
-		printf("rte_ring_mc_dequeue before\n");
 		pthread_mutex_lock(&stream->mutex);
 		while ((nb_rcv = rte_ring_mc_dequeue(stream->rcvbuf, (void **)&fragment)) < 0) {
 			pthread_cond_wait(&stream->cond, &stream->mutex);
 		}
 		pthread_mutex_unlock(&stream->mutex);
-		printf("rte_ring_mc_dequeue after\n");
 		if (fragment->length > len) {
 			rte_memcpy(buf, fragment->data, len);
 			uint32_t i = 0;
@@ -320,7 +301,7 @@ int nclose(int fd) {
 			if (stream->status != NG_TCP_STATUS_LISTEN) {
 				struct ng_tcp_fragment *fragment = rte_malloc("ng_tcp_fragment", sizeof(struct ng_tcp_fragment), 0);
 				if (fragment == NULL) return -1;
-				printf("nclose --> enter last ack\n");
+				// printf("nclose --> enter last ack\n");
 				fragment->data = NULL;
 				fragment->length = 0;
 				fragment->sport = stream->dport;

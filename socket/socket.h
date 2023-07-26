@@ -17,7 +17,5 @@ ssize_t nsendto(int sockfd, const void *buf, size_t len, __attribute__((unused))
                       const struct sockaddr *dest_addr, __attribute__((unused))  socklen_t addrlen);
 int nclose(int fd);
 
-
-void test_print(struct localhost *lhost);
 #endif
 

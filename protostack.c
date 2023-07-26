@@ -5,7 +5,7 @@
 #include "protostack.h"
 #include <rte_ether.h>
 
-uint32_t gLocalIp = MAKE_IPV4_ADDR(192, 168, 0, 199);
+uint32_t gLocalIp = MAKE_IPV4_ADDR(192, 168, 123, 199);
 
 int gDpdkPortId = 0;
 static const struct rte_eth_conf port_conf_default = {
@@ -58,7 +58,7 @@ static int pkt_process(void *arg) {
 			if (ehdr->ether_type == rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4)) {
 				struct rte_ipv4_hdr *iphdr =  rte_pktmbuf_mtod_offset(mbufs[i], struct rte_ipv4_hdr *, 
 				sizeof(struct rte_ether_hdr));
-				ng_arp_entry_insert(iphdr->src_addr, ehdr->s_addr.addr_bytes, arp_st);
+				// ng_arp_entry_insert(iphdr->src_addr, ehdr->s_addr.addr_bytes, arp_st);
 				if (iphdr->next_proto_id == IPPROTO_UDP) {
 					lhost = localhostInstance();
 					udp_process(mbufs[i], lhost);

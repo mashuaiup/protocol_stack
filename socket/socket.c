@@ -296,7 +296,7 @@ ssize_t nsendto(int sockfd, const void *buf, size_t len, __attribute__((unused))
 	addr.s_addr = ol->dip;
 	printf("nsendto ---> src: %s:%d \n", inet_ntoa(addr), ntohs(ol->dport));
 	addr.s_addr = ol->sip;
-	printf("nsendto ---> drc: %s:%d \n", inet_ntoa(addr), ntohs(ol->dport));
+	printf("nsendto ---> drc: %s:%d \n", inet_ntoa(addr), ntohs(ol->sport));
 	
 	ol->data = rte_malloc("unsigned char *", len, 0);
 	if (ol->data == NULL) {

@@ -45,7 +45,11 @@ int ng_arp_entry_insert(uint32_t ip, uint8_t *mac, arp_arg_t *arp_st) {
 
 	uint8_t *hwaddr = ng_get_dst_macaddr(ip, arp_st->arp_tb);
 	if (hwaddr == NULL) {
-
+		struct in_addr addr;
+		addr.s_addr = ip;
+		char buf[RTE_ETHER_ADDR_FMT_SIZE];
+		rte_ether_format_addr(buf, RTE_ETHER_ADDR_FMT_SIZE, (const struct rte_ether_addr *)mac);
+		printf("新插入一条arp记录,ip:%s  -->  mac:%s \n", inet_ntoa(addr), buf);
 		struct arp_entry *entry = (struct arp_entry *)rte_malloc("arp_entry",sizeof(struct arp_entry), 0);
 		if (entry) {
 			memset(entry, 0, sizeof(struct arp_entry));
@@ -72,13 +76,15 @@ int ng_encode_arp_pkt(uint8_t *msg, uint16_t opcode,uint8_t *src_mac, uint8_t *d
 	// 1 ethhdr
 	struct rte_ether_hdr *eth = (struct rte_ether_hdr *)msg;
 	rte_memcpy(eth->s_addr.addr_bytes, src_mac, RTE_ETHER_ADDR_LEN);
-	uint8_t gDefaultArpMac[RTE_ETHER_ADDR_LEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+	rte_memcpy(eth->d_addr.addr_bytes, dst_mac, RTE_ETHER_ADDR_LEN);
+	/* uint8_t gDefaultArpMac[RTE_ETHER_ADDR_LEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	if (!strncmp((const char *)dst_mac, (const char *)gDefaultArpMac, RTE_ETHER_ADDR_LEN)) {
 		uint8_t mac[RTE_ETHER_ADDR_LEN] = {0x0};
 		rte_memcpy(eth->d_addr.addr_bytes, mac, RTE_ETHER_ADDR_LEN);
 	} else {
 		rte_memcpy(eth->d_addr.addr_bytes, dst_mac, RTE_ETHER_ADDR_LEN);
-	}
+	} */
+	
 	eth->ether_type = htons(RTE_ETHER_TYPE_ARP);
 
 	// 2 arp 
@@ -90,7 +96,14 @@ int ng_encode_arp_pkt(uint8_t *msg, uint16_t opcode,uint8_t *src_mac, uint8_t *d
 	arp->arp_opcode = htons(opcode);
 
 	rte_memcpy(arp->arp_data.arp_sha.addr_bytes, src_mac, RTE_ETHER_ADDR_LEN);
-	rte_memcpy( arp->arp_data.arp_tha.addr_bytes, dst_mac, RTE_ETHER_ADDR_LEN);
+
+	uint8_t gDefaultArpMac[RTE_ETHER_ADDR_LEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+	if (!strncmp((const char *)dst_mac, (const char *)gDefaultArpMac, RTE_ETHER_ADDR_LEN)) {
+		uint8_t mac[RTE_ETHER_ADDR_LEN] = {0x0};
+		rte_memcpy(arp->arp_data.arp_tha.addr_bytes, mac, RTE_ETHER_ADDR_LEN);
+	} else {
+		rte_memcpy(arp->arp_data.arp_tha.addr_bytes, dst_mac, RTE_ETHER_ADDR_LEN);
+	}
 
 	arp->arp_data.arp_sip = sip;
 	arp->arp_data.arp_tip = dip;
@@ -133,17 +146,16 @@ void arp_request_timer_cb(__attribute__((unused)) struct rte_timer *tim,
 		struct rte_mbuf *arpbuf = NULL;
 		uint8_t *dstmac = ng_get_dst_macaddr(dstip, arp_st->arp_tb);
 		if (dstmac == NULL) {
+			struct in_addr addr;
+			addr.s_addr = dstip;
+			printf("ip: %s 不在arp内,开始进行广播！\n", inet_ntoa(addr));
 			uint8_t gDefaultArpMac[RTE_ETHER_ADDR_LEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};;
 			arpbuf = ng_send_arp(sat->mbuf_pool, RTE_ARP_OP_REQUEST, arp_st->gSrcMac, gDefaultArpMac, arp_st->gLocalIp, dstip);
-		
 		} else {
-
 			arpbuf = ng_send_arp(sat->mbuf_pool, RTE_ARP_OP_REQUEST, arp_st->gSrcMac, dstmac, arp_st->gLocalIp, dstip);
 		}
-
-		//rte_eth_tx_burst(gDpdkPortId, 0, &arpbuf, 1);
-		//rte_pktmbuf_free(arpbuf);
 		rte_ring_mp_enqueue_burst(ring->out, (void**)&arpbuf, 1, NULL);
+		rte_pktmbuf_free(arpbuf);
 	}
 	
 }
@@ -182,13 +194,13 @@ void arp_process(struct rte_mbuf *arpmbuf, struct rte_mempool *mbuf_pool, arp_ar
 			struct rte_mbuf *arpbuf = ng_send_arp(mbuf_pool, RTE_ARP_OP_REPLY, arp_st->gSrcMac, ahdr->arp_data.arp_sha.addr_bytes, 
 				ahdr->arp_data.arp_tip, ahdr->arp_data.arp_sip);
 
-			// rte_eth_tx_burst(gDpdkPortId, 0, &arpbuf, 1);
 			int num = rte_ring_mp_enqueue_burst(ioa_ring->out, (void**)&arpbuf, 1, NULL);
 			if(num < 1){
 				printf("arp协议数据包发送失败\n");
 			}
 			rte_pktmbuf_free(arpbuf);
-
+			ng_arp_entry_insert(ahdr->arp_data.arp_sip, ahdr->arp_data.arp_sha.addr_bytes, arp_st);
+			
 		} else if (ahdr->arp_opcode == rte_cpu_to_be_16(RTE_ARP_OP_REPLY)) {
 
 			printf("arp --> reply\n");
@@ -200,7 +212,8 @@ void arp_process(struct rte_mbuf *arpmbuf, struct rte_mempool *mbuf_pool, arp_ar
 			print_list_value(table);
 
 			if (hwaddr == NULL) {
-				struct arp_entry *entry = (struct arp_entry *)rte_malloc("arp_entry",sizeof(struct arp_entry), 0);
+				ng_arp_entry_insert(ahdr->arp_data.arp_sip, ahdr->arp_data.arp_sha.addr_bytes, arp_st);
+				/* struct arp_entry *entry = (struct arp_entry *)rte_malloc("arp_entry",sizeof(struct arp_entry), 0);
 				if (entry) {
 					memset(entry, 0, sizeof(struct arp_entry));
 
@@ -211,7 +224,7 @@ void arp_process(struct rte_mbuf *arpmbuf, struct rte_mempool *mbuf_pool, arp_ar
 					LL_ADD(entry, table->entries);
 					table->count ++;
 				}
-				print_list_value(table);
+				print_list_value(table); */
 			}
 			rte_pktmbuf_free(arpmbuf);
 		}

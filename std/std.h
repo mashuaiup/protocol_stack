@@ -200,6 +200,8 @@ extern struct ng_tcp_table     *ng_tcp_tb;
 extern struct ng_epoll_table   *ng_epoll_tb;
 extern unsigned char fd_table[MAX_FD_COUNT];
 
+extern stack_arg_t sat;
+
 struct ng_tcp_table *tcpInstance(void);
 struct localhost *localhostInstance(void);
 struct ng_epoll_table *epolltableInstance(void);

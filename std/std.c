@@ -12,6 +12,7 @@ pthread_mutex_t epoll_tb_mutex;
 struct localhost        *lhost       =NULL;
 struct ng_tcp_table     *ng_tcp_tb   =NULL;
 struct ng_epoll_table   *ng_epoll_tb =NULL;
+stack_arg_t sat;
 
 unsigned char fd_table[MAX_FD_COUNT] = {0};
 

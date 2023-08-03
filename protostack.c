@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include "protostack.h"
 #include <rte_ether.h>
-
-uint32_t gLocalIp = MAKE_IPV4_ADDR(192, 168, 123, 199);
+#include "stack.h"
+uint32_t gLocalIp = MAKE_IPV4_ADDR(192, 168, 0, 199);
 
 int gDpdkPortId = 0;
 static const struct rte_eth_conf port_conf_default = {
@@ -119,7 +119,7 @@ int stack_info_init(stack_arg_t * stack_arg){
 	return 1;
 }
 
-int main(int argc, char *argv[]) {
+int start(int argc, char *argv[]) {
 	if (rte_eal_init(argc, argv) < 0) {
 		rte_exit(EXIT_FAILURE, "Error with EAL init\n");
 	}

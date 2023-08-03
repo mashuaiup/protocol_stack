@@ -41,3 +41,6 @@ BUGS:
     1、偶现: udp启动时存在fd没有存到lhost中；          时间：2023/7/25
        原因分析：lhost全部变量，在使用单例模式时，没有处理线程安全问题，导致多个线程会重复去初始化lhost对象；
        解决办法：通过加锁的的方式实现线程安全；
+
+
+编译命令：g++ test_main.cpp  -o testmain -L/root/protocol_stack/build -ldpdk -lprotostack  -pthread

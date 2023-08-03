@@ -24,9 +24,9 @@ int ng_arp_entry_insert(uint32_t ip, uint8_t *mac, arp_arg_t *arp_st) {
 	if (hwaddr == NULL) {
 		struct in_addr addr;
 		addr.s_addr = ip;
-		char buf[RTE_ETHER_ADDR_FMT_SIZE];
-		rte_ether_format_addr(buf, RTE_ETHER_ADDR_FMT_SIZE, (const struct rte_ether_addr *)mac);
-		printf("add one new arp entry,ip:%s  -->  mac:%s \n", inet_ntoa(addr), buf);
+		// char buf[RTE_ETHER_ADDR_FMT_SIZE];
+		// rte_ether_format_addr(buf, RTE_ETHER_ADDR_FMT_SIZE, (const struct rte_ether_addr *)mac);
+		// printf("add one new arp entry,ip:%s  -->  mac:%s \n", inet_ntoa(addr), buf);
 		struct arp_entry *entry = (struct arp_entry *)rte_malloc("arp_entry",sizeof(struct arp_entry), 0);
 		if (entry) {
 			memset(entry, 0, sizeof(struct arp_entry));
@@ -118,9 +118,9 @@ void print_list_value(struct arp_table *table){
 		struct in_addr addr;
 		addr.s_addr = iter->ip;
 		printf("ip:%s ->",inet_ntoa(addr));
-		char buf[RTE_ETHER_ADDR_FMT_SIZE];
-		rte_ether_format_addr(buf, RTE_ETHER_ADDR_FMT_SIZE, (const struct rte_ether_addr *)iter->hwaddr);
-		printf("mac:%s\n",buf);
+		// char buf[RTE_ETHER_ADDR_FMT_SIZE];
+		// rte_ether_format_addr(buf, RTE_ETHER_ADDR_FMT_SIZE, (const struct rte_ether_addr *)iter->hwaddr);
+		// printf("mac:%s\n",buf);
 	}
 }
 

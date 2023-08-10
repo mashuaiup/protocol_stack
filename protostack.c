@@ -5,7 +5,7 @@
 #include "protostack.h"
 #include <rte_ether.h>
 #include "stack.h"
-uint32_t gLocalIp = MAKE_IPV4_ADDR(192, 168, 0, 199);
+uint32_t gLocalIp = MAKE_IPV4_ADDR(192, 168, 71, 199);
 
 int gDpdkPortId = 0;
 static const struct rte_eth_conf port_conf_default = {
@@ -109,7 +109,7 @@ void stack_init(int argc, char *argv[]){
 	rte_timer_reset(&arp_timer, hz, PERIODICAL, lcore_id, arp_request_timer_cb, &sat);
 }
 
-void forward_layer(__attribute__((unused))  void *arg){
+int forward_layer(__attribute__((unused))  void *arg){
 	while(1) {
 		// rx
 		struct rte_mbuf *rx[BURST_SIZE];
@@ -140,6 +140,7 @@ void forward_layer(__attribute__((unused))  void *arg){
 			prev_tsc = cur_tsc;
 		}
 	}
+	return 0;
 }
 
 int pkt_process_layer(void *arg) {
@@ -180,32 +181,13 @@ int pkt_process_layer(void *arg) {
 
 
 int start(int argc, char *argv[]) {
-
 	/* stack_init */
 	stack_init(argc, argv);
 	/* stack_forward_layer */
 	unsigned lcore_id = rte_lcore_id();
 	lcore_id = rte_get_next_lcore(lcore_id, 1, 0);
 	rte_eal_remote_launch(forward_layer, &sat, lcore_id);
-	/* stack_pktprocess_layer */
+	/* pkt_process_layer */
 	lcore_id = rte_get_next_lcore(lcore_id, 1, 0);
 	rte_eal_remote_launch(pkt_process_layer, &sat, lcore_id);
-
-
-	// if (rte_eal_init(argc, argv) < 0) {
-	// 	rte_exit(EXIT_FAILURE, "Error with EAL init\n");
-	// }
-	// stack_arg_t sat;
-	
-	
-
-
-
-
-	// lcore_id = rte_get_next_lcore(lcore_id, 1, 0);
-	// rte_eal_remote_launch(udp_server_entry, &sat, lcore_id);
-	// lcore_id = rte_get_next_lcore(lcore_id, 1, 0);
-	// rte_eal_remote_launch(tcp_server_entry, &sat, lcore_id);
-
-	
 }

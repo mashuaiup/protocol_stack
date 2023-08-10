@@ -162,6 +162,22 @@ struct epitem {
 RB_HEAD(_epoll_rb_socket, epitem);
 typedef struct _epoll_rb_socket ep_rb_tree;
 
+enum EPOLL_EVENTS {
+	EPOLLNONE 	= 0x0000,
+	EPOLLIN 	= 0x0001,
+	EPOLLPRI	= 0x0002,
+	EPOLLOUT	= 0x0004,
+	EPOLLRDNORM = 0x0040,
+	EPOLLRDBAND = 0x0080,
+	EPOLLWRNORM = 0x0100,
+	EPOLLWRBAND = 0x0200,
+	EPOLLMSG	= 0x0400,
+	EPOLLERR	= 0x0008,
+	EPOLLHUP 	= 0x0010,
+	EPOLLRDHUP 	= 0x2000,
+	EPOLLONESHOT = (1 << 30),
+	EPOLLET 	= (1 << 31)
+};
 struct eventpoll {                //epoll实例
 	int fd;                       //epoll实例的文件描述符，用于管理epoll实例，而不是服务器端的文件描述符
 

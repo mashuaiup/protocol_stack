@@ -1,4 +1,5 @@
 #include "epoll.h"
+#include "stack.h"
 #include <rte_malloc.h>
 #include <stdio.h>
 #include <string.h>

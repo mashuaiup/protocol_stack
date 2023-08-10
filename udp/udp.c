@@ -1,4 +1,5 @@
 #include "udp.h"
+#include "stack.h"
 #include <rte_tcp.h>
 #include <rte_udp.h>
 #include <rte_ip.h>
@@ -75,7 +76,7 @@ int udp_server_entry(__attribute__((unused))  void *arg) {
 
 	localaddr.sin_port = htons(8889);
 	localaddr.sin_family = AF_INET;
-	localaddr.sin_addr.s_addr = inet_addr("192.168.0.199"); // 0.0.0.0
+	localaddr.sin_addr.s_addr = inet_addr("192.168.71.199"); // 0.0.0.0
 	
 	nbind(connfd, (struct sockaddr*)&localaddr, sizeof(localaddr));
 

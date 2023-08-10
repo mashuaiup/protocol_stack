@@ -18,7 +18,7 @@ struct conn_tuple {
 int ng_tcp_process(struct rte_mbuf *tcpmbuf, struct ng_tcp_table *stream_table, struct ng_epoll_table *epoll_tb_lhead);
 int ng_tcp_out(struct rte_mempool *mbuf_pool, struct inout_ring* ioa_ring, struct ng_tcp_table *table);
 struct rte_mbuf *ng_tcp_pkt(struct rte_mempool *mbuf_pool, uint32_t sip, uint32_t dip, struct ng_tcp_fragment *fragment);
-int tcp_server_entry(__attribute__((unused))  void *arg);
+
 
 int ng_encode_tcp_apppkt(uint8_t *msg, uint32_t sip, uint32_t dip,struct ng_tcp_fragment *fragment);
 int ng_tcp_handle_last_ack(struct ng_tcp_stream *stream, struct rte_tcp_hdr *tcphdr);

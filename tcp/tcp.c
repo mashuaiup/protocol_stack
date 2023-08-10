@@ -1,4 +1,5 @@
 #include "tcp.h"
+#include "stack.h"
 #include <rte_tcp.h>
 #include <rte_ip.h>
 #include <rte_ether.h>

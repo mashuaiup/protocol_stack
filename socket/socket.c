@@ -1,4 +1,5 @@
 #include "socket.h"
+#include "stack.h"
 #include <rte_tcp.h>
 #include <rte_malloc.h>
 #include <rte_ring.h>
@@ -131,7 +132,7 @@ int naccept(int sockfd, struct sockaddr *addr, __attribute__((unused)) socklen_t
 	return -1;
 }
 
-ssize_t nsend(int sockfd, const void *buf, size_t len,__attribute__((unused)) int flags) {
+ssize_t nsend(int sockfd, const void *buf, size_t len, __attribute__((unused)) int flags) {
 	ssize_t length = 0;
 
 	ng_tcp_tb = tcpInstance();
@@ -205,6 +206,119 @@ ssize_t nrecv(int sockfd, void *buf, size_t len, __attribute__((unused)) int fla
 	}
 	return length;
 }
+ssize_t nreadv (int sockfd, const struct iovec *iovec, int count) {
+	/* only support count_max <= 2*/
+	if(count > 2) return -1;
+	struct iovec *iov0 = (struct iovec *)iovec;
+	int len0 = iov0->iov_len;
+	struct iovec *iov1 = iov0 + 1;
+	int len1 = iov1->iov_len;
+	
+ 	ssize_t length = -1;
+	ng_tcp_tb = tcpInstance();
+	struct ng_tcp_stream *stream = get_stream_info_fromfd(sockfd, ng_tcp_tb);
+	if(stream == NULL) return -1;
+
+	struct ng_tcp_fragment *fragment = NULL;
+	int nb_rcv = 0;
+	//get data from fd->recvbuf  block!
+	pthread_mutex_lock(&stream->mutex);
+	while ((nb_rcv = rte_ring_mc_dequeue(stream->rcvbuf, (void **)&fragment)) < 0) {
+		pthread_cond_wait(&stream->cond, &stream->mutex);
+	}
+	pthread_mutex_unlock(&stream->mutex);
+
+	
+	/* 1: 0 < length < len0;
+	   2: len0 < length < len0+len1
+	   3: len0 + len1 < length*/
+
+	if(fragment->length <= 0){
+		rte_free(fragment);
+		return -1;
+	}else if(fragment->length <= len0){
+		rte_memcpy(iov0->iov_base, fragment->data, fragment->length);
+	}else if(fragment->length > len0 && fragment->length < len0 + len1){
+		rte_memcpy(iov0->iov_base, fragment->data, len0);
+		rte_memcpy(iov1->iov_base, fragment->data + len0, fragment->length - len0);
+	}
+	printf("readv message from client: %s \n", fragment->data);
+	length = fragment->length;
+	rte_free(fragment->data);
+	fragment->data = NULL;
+	rte_free(fragment);
+	return length;
+}
+
+ssize_t nwritev (int sockfd, const struct iovec *iovec, int count){
+
+	if(count > 2) return -1;
+
+	struct iovec *iov0 = (struct iovec *)iovec;
+	size_t len0 = iov0->iov_len;
+
+	struct iovec *iov1 = NULL;
+	size_t len1 = 0;
+	if(count == 2){
+		iov1 = iov0 + 1;
+		len1 = iov1->iov_len;
+	}
+	
+	ssize_t length = -1;
+
+	ng_tcp_tb = tcpInstance();
+	struct ng_tcp_stream *stream = get_stream_info_fromfd(sockfd, ng_tcp_tb);
+	if(stream == NULL) return -1;
+
+	struct ng_tcp_fragment *fragment = rte_malloc("ng_tcp_fragment", sizeof(struct ng_tcp_fragment), 0);
+	if (fragment == NULL) {
+		return -2;
+	}
+	memset(fragment, 0, sizeof(struct ng_tcp_fragment));
+
+	fragment->dport = stream->sport;
+	fragment->sport = stream->dport;
+	fragment->acknum = stream->rcv_nxt;
+	fragment->seqnum = stream->snd_nxt;
+	fragment->tcp_flags = RTE_TCP_ACK_FLAG | RTE_TCP_PSH_FLAG;
+	fragment->windows = TCP_INITIAL_WINDOW;
+	fragment->hdrlen_off = 0x50;
+
+	if(count == 1){
+		length = len0;
+		fragment->data = rte_malloc("unsigned char *", length + 1, 0);
+		if (fragment->data == NULL) {
+			rte_free(fragment);
+			return -1;
+		}
+		memset(fragment->data, 0, length + 1);
+		rte_memcpy(fragment->data, iov0, length);
+	}else if(count == 2){
+		length = len0 + len1;
+		fragment->data = rte_malloc("unsigned char *", length + 1, 0);
+		if (fragment->data == NULL) {
+			rte_free(fragment);
+			return -1;
+		}
+		memset(fragment->data, 0, length + 1);
+		rte_memcpy(fragment->data, (void*)iov0, len0);
+		rte_memcpy(fragment->data + len0, (void*)iov1, len1);
+	}
+
+	printf("writev message from server: %s \n", fragment->data);
+
+	fragment->length = length;
+	// int nb_snd = 0;
+	rte_ring_mp_enqueue(stream->sndbuf, fragment);
+
+	return length;
+
+}
+
+
+
+
+
 
 ssize_t nrecvfrom(int sockfd, void *buf, size_t len, __attribute__((unused))  int flags,
                         struct sockaddr *src_addr, __attribute__((unused))  socklen_t *addrlen) {

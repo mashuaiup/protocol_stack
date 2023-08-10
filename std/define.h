@@ -13,4 +13,7 @@
 #define UDP_APP_RECV_BUFFER_SIZE	   128
 #define TCP_OPTION_LENGTH	10
 #define TCP_INITIAL_WINDOW  14600
+#define EPOLL_CTL_ADD	1
+#define EPOLL_CTL_DEL	2
+#define EPOLL_CTL_MOD	3
 #endif

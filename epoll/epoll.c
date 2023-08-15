@@ -149,13 +149,14 @@ int nepoll_ctl(int epfd, int op, int sockid, struct epoll_event *event) {
 		pthread_mutex_unlock(&ep->mtx);
 
 	} else if (op == EPOLL_CTL_MOD) {
-
+		printf("底层开始修改fd的事件类别\n");
 		struct epitem tmp;
 		tmp.sockfd = sockid;
 		struct epitem *epi = RB_FIND(_epoll_rb_socket, &ep->rbr, &tmp);
 		if (epi) {
 			epi->event.events = event->events;
-			epi->event.events |= EPOLLERR | EPOLLHUP;
+			printf("底层开始修改fd的事件类别\n");
+			// epi->event.events |= EPOLLERR | EPOLLHUP;
 		} else {
 			// rte_errno = -ENOENT;
 			return -1;

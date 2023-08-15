@@ -237,12 +237,20 @@ ssize_t nreadv (int sockfd, const struct iovec *iovec, int count) {
 		rte_free(fragment);
 		return -1;
 	}else if(fragment->length <= len0){
+		char show_buff[65535];
+		rte_memcpy(show_buff, fragment->data, fragment->length);
+		printf("show_buff : %s\n", show_buff);
 		rte_memcpy(iov0->iov_base, fragment->data, fragment->length);
 	}else if(fragment->length > len0 && fragment->length < len0 + len1){
+		char show_buff[65535];
 		rte_memcpy(iov0->iov_base, fragment->data, len0);
 		rte_memcpy(iov1->iov_base, fragment->data + len0, fragment->length - len0);
+		printf("show_buff : %s\n", show_buff);
 	}
 	printf("readv message from client: %s \n", fragment->data);
+	
+	printf("iov0收到的数据为:%s\n", iov0->iov_base);
+	printf("iov1收到的数据为:%s\n", iov1->iov_base);
 	length = fragment->length;
 	rte_free(fragment->data);
 	fragment->data = NULL;
@@ -251,7 +259,7 @@ ssize_t nreadv (int sockfd, const struct iovec *iovec, int count) {
 }
 
 ssize_t nwritev (int sockfd, const struct iovec *iovec, int count){
-
+	printf("nwritev count is %d\n", count);
 	if(count > 2) return -1;
 
 	struct iovec *iov0 = (struct iovec *)iovec;
@@ -261,9 +269,11 @@ ssize_t nwritev (int sockfd, const struct iovec *iovec, int count){
 	size_t len1 = 0;
 	if(count == 2){
 		iov1 = iov0 + 1;
+		// iov1 = (struct iovec *)(iov0->iov_base + len0);
 		len1 = iov1->iov_len;
+		printf("++++++++++++++iov0准备发送的数据:%s\n", iov0->iov_base);
+		printf("++++++++++++++iov1准备发送的数据:%s\n", iov1->iov_base);
 	}
-	
 	ssize_t length = -1;
 
 	ng_tcp_tb = tcpInstance();
@@ -292,7 +302,7 @@ ssize_t nwritev (int sockfd, const struct iovec *iovec, int count){
 			return -1;
 		}
 		memset(fragment->data, 0, length + 1);
-		rte_memcpy(fragment->data, iov0, length);
+		rte_memcpy(fragment->data, iov0->iov_base, length);
 	}else if(count == 2){
 		length = len0 + len1;
 		fragment->data = rte_malloc("unsigned char *", length + 1, 0);
@@ -301,24 +311,19 @@ ssize_t nwritev (int sockfd, const struct iovec *iovec, int count){
 			return -1;
 		}
 		memset(fragment->data, 0, length + 1);
-		rte_memcpy(fragment->data, (void*)iov0, len0);
-		rte_memcpy(fragment->data + len0, (void*)iov1, len1);
+		rte_memcpy(fragment->data, iov0->iov_base, len0);
+		rte_memcpy(fragment->data + len0, iov1->iov_base, len1);
 	}
 
 	printf("writev message from server: %s \n", fragment->data);
 
-	fragment->length = length;
+	fragment->length = length + 1;
 	// int nb_snd = 0;
 	rte_ring_mp_enqueue(stream->sndbuf, fragment);
 
 	return length;
 
 }
-
-
-
-
-
 
 ssize_t nrecvfrom(int sockfd, void *buf, size_t len, __attribute__((unused))  int flags,
                         struct sockaddr *src_addr, __attribute__((unused))  socklen_t *addrlen) {

@@ -5,7 +5,7 @@
 #include "protostack.h"
 #include <rte_ether.h>
 #include "stack.h"
-uint32_t gLocalIp = MAKE_IPV4_ADDR(192, 168, 71, 199);
+uint32_t gLocalIp = MAKE_IPV4_ADDR(192, 168, 217, 199);
 
 int gDpdkPortId = 0;
 static const struct rte_eth_conf port_conf_default = {
